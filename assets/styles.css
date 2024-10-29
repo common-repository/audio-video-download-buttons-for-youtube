@@ -1,0 +1,15 @@
+.dbfy-download-wrapper { position:relative; margin:10px; }
+.dbfy-download-wrapper .container1 { display:flex; flex-direction:row; }
+.dbfy-download-wrapper .av_container { margin: 0 15px; border: 1px #2e2e2e solid; }
+.dbfy-download-wrapper .inner2 { display:table; }
+.dbfy-download-wrapper .inner2 > * { display: table-row; }
+.dbfy-download-wrapper .inner2 .prop { display: table-cell; border: 1px solid #7c6363; padding: 2px; }
+.dbfy-download-wrapper a.downloadButton { background:#e7e7e7; color:black; padding:2px 5px; border-radius:5px; text-decoration:none; border-width: 0; box-shadow: 0px 0px 3px black; cursor: pointer;}
+.dbfy-download-wrapper a.downloadButton.faded { padding:10px; }
+
+
+.dbfy-download-wrapper .downloadButtons { z-index: 8888; position:absolute; top:25px; left:0; background:black; color:white; padding:10px; border-radius:10px; transition: 1s all; opacity:0; font-size: 0.8em;  }
+.dbfy-download-wrapper .downloadButtons .yt_terms_comply { color: pink; margin: 10px; display: inline-block; font-size: 0.8em; max-width: 220px; }
+.dbfy-download-wrapper.shown .downloadButtons { opacity:1; }
+.dbfy-download-wrapper .downloadButtons .container1 .title { display:block; font-weight:bold; color:Wheat; text-align: center; font-size: 1.1em; margin-top:5px; letter-spacing: 3px; }
+.dbfy-download-wrapper .downloadButtons a { color:aqua;  }
