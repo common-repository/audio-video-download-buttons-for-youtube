@@ -1484,11 +1484,14 @@ if (!class_exists('\\Puvox\\library_wp')) {
 			foreach ($stardard_options_array as $key => $block)
 			{
 				$type = $this->array_value ($block, 'type', '');
-				if ($type === 'linebreak') continue;
+				if (in_array($type, ['linebreak', 'separator'])) continue;
 				$val = $block['default'];
 				if    ( is_bool   ($val) )   $existing_options_values[$key] = isset($_POST[$prefix][$key]); 
 				elseif( is_numeric ($val) )  $existing_options_values[$key] = (double)($_POST[$prefix][$key]); 
-				elseif( is_string ($val) )   $existing_options_values[$key] = stripslashes(sanitize_textarea_field($_POST[$prefix][$key])); 
+				elseif( is_string ($val) )   {
+					$is_html = $this->array_value ($block, 'html', false);
+					$existing_options_values[$key] = stripslashes( $is_html ? wp_kses_post($_POST[$prefix][$key]) : sanitize_textarea_field($_POST[$prefix][$key]));
+				}
 				elseif( is_array ($val) )	 $existing_options_values[$key] = $this->array_map_recursive(['sanitize_textarea_field','stripslashes'], $_POST[$prefix][$key] ) ;
 			}
 		}
@@ -1501,7 +1504,7 @@ if (!class_exists('\\Puvox\\library_wp')) {
 			$title         = $this->array_value($block, 'title');
 			if (function_exists('__')) { $title = __($title); } // support translation
 			
-			if ($type == 'linebreak') {
+			if ((in_array($type, ['linebreak', 'separator']))) {
 				$input_html = '<hr>';
 				$out .= 
 				'<tr class="trline tr_'.$key_name.' trempty" style="background:#cdcdcd;"><td colspan="100%"></td></tr>';
@@ -1513,25 +1516,28 @@ if (!class_exists('\\Puvox\\library_wp')) {
 			}
 			else {
 				$default_value = $block['default'];
-				$current_value = $this->array_value($existing_options_values, $key_name, $default_value); //actually, default_value should already be prefilled during options initialization (in refresh_opt)
+				$current_value = $this->array_value($existing_options_values, $key_name, $default_value); // actually, default_value should already be prefilled during options initialization (in refresh_opt)
+				$type          = $this->array_value($block, 'type', 'text');
 				$is_numeric    = is_numeric($default_value);
 				$is_string     = is_string($default_value);
-				$is_color      = $is_string && self::is_color_string($default_value);
+				$is_bool       = is_bool($default_value);
 				$description   = $this->array_value($block, 'description');
-				$type          = $this->array_value($block, 'type', 'text');
-				$placeholder   = $this->array_value($block, 'placeholder', $default_value);
+				$is_color      = $is_string && (self::is_color_string($default_value) || $type=='color');
+				$placeholder   = htmlentities ($this->array_value($block, 'placeholder', $default_value));
+				
 
 				$input_html = '';
-				if ( is_bool($default_value) )
+				if ( $is_bool )
 					$input_html = '<input name="'.$prefix.'['.$key_name.']" value="1" type="checkbox" '. $this->if_checked($current_value).' />';
-				elseif( is_numeric($default_value) )
+				elseif( $is_numeric )
 					$input_html = '<input name="'.$prefix.'['.$key_name.']" value="'. number_format($current_value) .'" placeholder="'.$placeholder.'" style="width:70px;" />';
-				elseif( is_string($default_value) ){
-					if($type=='color')
+				elseif( $is_string ){
+					$current_value = htmlentities(wp_kses_post($current_value));
+					if( $is_color )
 						$input_html = '<input type="color" name="'.$prefix.'['.$key_name.']" value="'. esc_attr($current_value) .'" placeholder="'.$placeholder.'" style="width:70px;" />';
-					else if($type=='textarea') 
+					else if( $type=='textarea' ) 
 						$input_html = '<textarea name="'.$prefix.'['.$key_name.']" placeholder="'.$placeholder.'" style="width: 100%;">'. $current_value .'</textarea>';
-					else if($type=='html') 
+					else if( $type=='html' ) 
 						$input_html = $val; 
 					else    //default to text              
 						$input_html = '<input name="'.$prefix.'['.$key_name.']" value="'. $current_value .'" placeholder="'.$placeholder.'" />'; 
@@ -1543,7 +1549,8 @@ if (!class_exists('\\Puvox\\library_wp')) {
 					$input_html = '<div class="sub_group_array">';
 					foreach($arr as $bKey=>$bValue ){ 
 						$is_random = $bKey==$rand_id;
-						if( isset($bValue) || $is_random ) {	
+						if( isset($bValue) || $is_random ) {
+							$bValue = htmlentities(wp_kses_post($bValue));
 							$input_html .= '<div class="arraydiv">';
 							$input_html .= "<span>{$bKey}</span>";
 							if($type=='textarea') 
@@ -1557,7 +1564,7 @@ if (!class_exists('\\Puvox\\library_wp')) {
 				}
 				$input_html .= $description ? '<p class="description">'.$description.'</p>' : '';
 				
-				$tr_style = $this->array_value ($block, 'transparent_bottom', false) ? 'border-bottom:1px solid transparent;' : '';
+				$tr_style = $this->array_value ($block, 'transparent_bottom', false) ||  $this->array_value ($block, 'no_separator', false) ? 'border-bottom:1px solid transparent;' : '';
 				// add row
 				$out .= 
 				'<tr class="tr_line tr_'.$key_name.'" style="'.$tr_style.'">'.
@@ -1711,7 +1718,7 @@ if (! class_exists('\\Puvox\\wp_plugin')) {
 			$this->__construct_my();		// All other custom construction hooks 
 		}
 
-		$this->plugin_files		= array_merge( (property_exists($this, 'plugin_files') ? $this->plugin_files : [] ),   ['index.php'] );
+		$this->plugin_files		= array_merge( (property_exists($this, 'plugin_files') ? $this->plugin_files : [] ),   [ 'index.php', basename(__DIR__) . '.php' ] );
 		$this->translation_phrases= $this->get_phrases();
 		$this->is_in_customizer	= (stripos($this->helpers->currentURL, admin_url('customize.php')) !== false);
 		$this->myplugin_class	= 'myplugin puvox_plugin postbox version_'. (!$this->static_settings['has_pro_version']  ? "free" : ($this->is_pro_legal ? "pro" : "not_pro") );
@@ -1784,7 +1791,7 @@ if (! class_exists('\\Puvox\\wp_plugin')) {
 			),
 			'lang'				=> $this->helpers->get_locale_sanitized(),
 			'wp_rate_url'		=> 'https://wordpress.org/support/plugin/'.$this->slug.'/reviews/#new-post',
-			'donate_url'		=> 'https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=contact@puvox.software&tax=0&currency=USD&item_name=For%20Programming%20Services', // business: http://paypal.me/Puvox   ||  personal : http://paypal.me/ttodua || https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=contact@puvox.software&tax=0&currency=USD&item_name=For%20Programming%20Services  || https://stackoverflow.com/a/43083891/2377343
+			'donate_url'		=> 'https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=contact@puvox.software&tax=0&currency=USD&item_name=Tip%20For%20Programming%20Services', // business: http://paypal.me/Puvox   ||  personal : http://paypal.me/ttodua || https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=contact@puvox.software&tax=0&currency=USD&item_name=For%20Programming%20Services  || https://stackoverflow.com/a/43083891/2377343
 			'donate_default'	=> 4,
 			'mail_errors'		=> 'wp_plugin_errors@puvox.software',
 			'licenser_domain'	=> $AuthorDomain,
@@ -2430,7 +2437,10 @@ if (! class_exists('\\Puvox\\wp_plugin')) {
 		$cont='';
 		foreach( $this->plugin_files as $each)
 		{
-			$cont .= file_get_contents( $this->helpers->baseDIR.'/'. basename($each) );
+			$filepath = $this->helpers->baseDIR.'/'. basename($each);
+			if (file_exists($filepath)) {
+				$cont .= file_get_contents($filepath);
+			}
 		}
 		preg_match_all( '/\$this\-\>phrase\((.*?)\)/si', $cont, $matches );
 		$phrases_array = $this->get_phrases();

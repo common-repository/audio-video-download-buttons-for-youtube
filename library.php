@@ -2340,6 +2340,19 @@ class library
 		return $text;
 	}
 
+    protected function parseJson($content)
+    {
+        $content = json_decode($content, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new UnexpectedValueException(sprintf(
+                "Failed to parse JSON response: %s",
+                json_last_error_msg()
+            ));
+        }
+
+        return $content;
+    }
 
 	public function translate__DAY($text,$target_lang='') {	
 		if (in_array($text, array('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')) ) {
